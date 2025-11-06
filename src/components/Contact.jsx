@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import emailjs from "@emailjs/browser";
 
 import { styles } from "../styles";
 import { EarthCanvas } from "./canvas";
@@ -16,6 +15,7 @@ const Contact = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
 
   const handleChange = (e) => {
     const { target } = e;
@@ -27,41 +27,45 @@ const Contact = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setSubmitStatus(null);
 
-        emailjs
-      .send(
-        import.meta.env.VITE_APP_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_APP_EMAILJS_TEMPLATE_ID,
-        {
-          from_name: form.name,
-          to_name: "Felipe Londoño Humar",
-          from_email: form.email,
-          to_email: "flondonohumar@gmail.com",
+    try {
+      const response = await fetch("https://formspree.io/f/xqagrbdb", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
           message: form.message,
-        },
-        import.meta.env.VITE_APP_EMAILJS_PUBLIC_KEY
-      )
-      .then(
-        () => {
-          setLoading(false);
-          alert("Thank you. I will get back to you as soon as possible.");
+        }),
+      });
 
-          setForm({
-            name: "",
-            email: "",
-            message: "",
-          });
-        },
-        (error) => {
-          setLoading(false);
-          console.error(error);
+      if (response.ok) {
+        setLoading(false);
+        setSubmitStatus("success");
+        alert("Thank you! I will get back to you as soon as possible.");
 
-          alert("Ahh, something went wrong. Please try again.");
-        }
-      );
+        setForm({
+          name: "",
+          email: "",
+          message: "",
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Something went wrong");
+      }
+    } catch (error) {
+      setLoading(false);
+      setSubmitStatus("error");
+      console.error("Form submission error:", error);
+      alert("Ahh, something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -152,7 +156,10 @@ const Contact = () => {
 
           <button
             type='submit'
-            className='bg-tertiary py-3 px-8 rounded-xl outline-none w-fit text-white font-bold shadow-md shadow-primary'
+            disabled={loading}
+            className={`bg-tertiary py-3 px-8 rounded-xl outline-none w-fit text-white font-bold shadow-md shadow-primary transition-opacity ${
+              loading ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"
+            }`}
           >
             {loading ? "Sending..." : "Send"}
           </button>
