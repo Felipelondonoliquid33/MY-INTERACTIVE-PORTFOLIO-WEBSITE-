@@ -320,15 +320,17 @@ export const Plasma = ({
   // Show fallback gradient background only if WebGL fails
   const gradientColor = color || '#915EFF';
   if (hasError) {
-    // Always show a robust, animated, dark gradient for mobile fallback
+    // On mobile, use a static, solid dark purple gradient for performance and reliability
+    const isMobile = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
     return (
       <div
         ref={containerRef}
         className="plasma-container plasma-fallback"
         style={{
-          background: 'linear-gradient(135deg, #18122B 0%, #915EFF 30%, #232946 70%, #18122B 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradientShift 20s ease-in-out infinite',
+          background: isMobile
+            ? 'linear-gradient(135deg, #2d174d 0%, #915EFF 60%, #18122B 100%)'
+            : 'linear-gradient(135deg, #18122B 0%, #915EFF 30%, #232946 70%, #18122B 100%)',
+          backgroundSize: 'cover',
           minHeight: '100vh',
           minWidth: '100vw',
           position: 'fixed',
@@ -338,8 +340,7 @@ export const Plasma = ({
           bottom: 0,
           zIndex: 0,
           pointerEvents: 'none',
-          transition: 'background 0.3s',
-          backgroundColor: '#18122B', // persistent fallback color
+          backgroundColor: '#2d174d',
         }}
       />
     );

@@ -1,8 +1,8 @@
 .plasma-fallback {
-  background: linear-gradient(135deg, #18122B 0%, #915EFF 30%, #232946 70%, #18122B 100%) !important;
-  background-size: 400% 400% !important;
-  animation: gradientShift 20s ease-in-out infinite !important;
-  background-color: #18122B !important;
+  background: linear-gradient(135deg, #2d174d 0%, #915EFF 60%, #18122B 100%) !important;
+  background-size: cover !important;
+  animation: none !important;
+  background-color: #2d174d !important;
 }
 @keyframes plasmaGradient {
   0% { background-position: 0% 50%; }
