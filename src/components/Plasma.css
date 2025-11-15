@@ -1,3 +1,7 @@
+@keyframes plasmaGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
 .plasma-container {
   position: fixed !important;
   top: 0 !important;

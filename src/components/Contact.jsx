@@ -5,6 +5,7 @@ import { styles } from "../styles";
 import { EarthCanvas } from "./canvas";
 import { SectionWrapper } from "../hoc";
 import { slideIn } from "../utils/motion";
+import { reactjs } from "../assets";
 
 const Contact = () => {
   const formRef = useRef();
@@ -103,12 +104,22 @@ const Contact = () => {
           <div className='flex items-center gap-4'>
             <span className='text-secondary font-medium'>LinkedIn:</span>
             <a 
-              href='https://www.linkedin.com/in/felipe-londo%C3%B1o-humar-13440b168/' 
+              href='https://www.linkedin.com/in/felipe-londo%C3%B1o-humar/' 
               target='_blank'
               rel='noopener noreferrer'
-              className='text-white hover:text-[#915EFF] transition-colors'
+              className='group flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#0A66C2] to-[#005983] hover:from-[#005983] hover:to-[#0A66C2] transition-all duration-300 shadow-lg'
+              style={{ minWidth: 0 }}
             >
-              Connect with me
+              <motion.img
+                src={reactjs}
+                alt='React Logo'
+                className='w-8 h-8 drop-shadow-lg'
+                animate={{ rotate: [0, 360] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              />
+              <span className='text-white font-semibold whitespace-nowrap group-hover:text-[#FFD700] transition-colors duration-300'>
+                Connect on LinkedIn
+              </span>
             </a>
           </div>
           <div className='flex items-center gap-4'>

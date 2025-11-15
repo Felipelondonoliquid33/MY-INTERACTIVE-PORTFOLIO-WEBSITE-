@@ -89,28 +89,19 @@ export const Plasma = ({
   const containerRef = useRef(null);
   const mousePos = useRef({ x: 0, y: 0 });
   
-  // Initialize mobile detection immediately (before first render)
-  const initialMobileCheck = typeof window !== 'undefined' 
-    ? (window.matchMedia("(max-width: 768px)").matches || 
-       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
-    : false;
-  
-  const [hasError, setHasError] = useState(initialMobileCheck); // Start with true on mobile
-  const [isMobile, setIsMobile] = useState(initialMobileCheck);
-  const [isInitializing, setIsInitializing] = useState(false); // Start as false since we know immediately
+  // Remove forced mobile fallback: always try effect, fallback only if WebGL fails
+  const [hasError, setHasError] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.matchMedia("(max-width: 768px)").matches : false);
+  const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
-    // Verify mobile detection and handle desktop WebGL test
-    if (!initialMobileCheck) {
-      // Desktop: test WebGL support
-      const testCanvas = document.createElement('canvas');
-      const testGl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
-      if (!testGl) {
-        setHasError(true);
-      }
+    // Test WebGL support for all devices
+    const testCanvas = document.createElement('canvas');
+    const testGl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
+    if (!testGl) {
+      setHasError(true);
     }
-    // Mobile is already set correctly in initial state, no need to change
-  }, []); // Run only once on mount
+  }, []);
 
   useEffect(() => {
     // Skip WebGL initialization if there's an error
@@ -326,20 +317,17 @@ export const Plasma = ({
     }
   }, [color, speed, direction, scale, opacity, mouseInteractive, hasError, isMobile, isInitializing]);
 
-  // Show fallback gradient background if WebGL fails or on mobile
-  // Mobile always uses gradient for stability and performance
-  // Always show gradient on mobile or if there's an error
+  // Show fallback gradient background only if WebGL fails
   const gradientColor = color || '#915EFF';
-  
-  if (hasError || isMobile || initialMobileCheck) {
+  if (hasError) {
     return (
       <div 
         ref={containerRef} 
         className="plasma-container"
         style={{
-          background: `linear-gradient(135deg, ${gradientColor}20 0%, #050816 20%, #100d25 50%, #050816 80%, ${gradientColor}20 100%)`,
-          backgroundSize: '400% 400%',
-          animation: 'gradientShift 20s ease infinite',
+          background: 'linear-gradient(120deg, #915EFF 0%, #6EE7B7 50%, #232946 100%)',
+          backgroundSize: '200% 200%',
+          animation: 'plasmaGradient 8s ease-in-out infinite alternate',
           minHeight: '100vh',
           minWidth: '100vw',
           position: 'fixed',

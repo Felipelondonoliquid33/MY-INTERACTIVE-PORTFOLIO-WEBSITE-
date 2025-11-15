@@ -4,7 +4,7 @@ import { OrbitControls, Preload, useGLTF } from "@react-three/drei";
 
 import CanvasLoader from "../Loader";
 
-const Computers = ({ isMobile }) => {
+const Computers = ({ isMobile, rotationY = 0 }) => {
   const computer = useGLTF("./desktop_pc/scene.gltf");
 
   return (
@@ -22,9 +22,9 @@ const Computers = ({ isMobile }) => {
       <ambientLight intensity={isMobile ? 0.5 : 0.2} />
       <primitive
         object={computer.scene}
-        scale={isMobile ? 0.6 : 0.75} // Larger on mobile
-        position={isMobile ? [0, -0.5, 0] : [0, -3.25, -1.5]} // Raised on mobile
-        rotation={isMobile ? [0, Math.PI / 8, 0] : [-0.01, -0.2, -0.1]} // Slight angle for mobile
+        scale={isMobile ? 0.48 : 0.75} // More natural on mobile
+        position={isMobile ? [0, -0.7, 0] : [0, -3.25, -1.5]} // Lowered a bit for mobile
+        rotation={isMobile ? [0, rotationY, 0] : [-0.01, -0.2, -0.1]} // Facing forward on mobile, allow Y rotation
       />
     </mesh>
   );
@@ -54,14 +54,27 @@ const ComputersCanvas = () => {
     };
   }, []);
 
+  // For perpetual rotation on mobile
+  const [rotationY, setRotationY] = useState(0);
+  useEffect(() => {
+    if (!isMobile) return;
+    let frame;
+    const animate = () => {
+      setRotationY((prev) => prev + 0.01);
+      frame = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => cancelAnimationFrame(frame);
+  }, [isMobile]);
+
   return (
     <Canvas
       frameloop='always'
       shadows={!isMobile}
       dpr={[1, isMobile ? 1 : 2]}
       camera={{ 
-        position: isMobile ? [0, 0, 5] : [20, 3, 5], 
-        fov: isMobile ? 50 : 25 
+        position: isMobile ? [0, 0, 3.2] : [20, 3, 5], // Pull camera back for mobile
+        fov: isMobile ? 35 : 25 // Wider field of view for mobile
       }}
       gl={{ 
         preserveDrawingBuffer: true,
@@ -88,10 +101,8 @@ const ComputersCanvas = () => {
 
       <Suspense fallback={<CanvasLoader />}>
         {isMobile ? (
-          // On mobile, show a fixed, non-interactive, statically rotated model
-          <group rotation={[0, Math.PI / 6, 0]}>
-            <Computers isMobile={true} />
-          </group>
+          // On mobile, show a perpetually rotating, non-interactive model
+          <Computers isMobile={true} rotationY={rotationY} />
         ) : (
           <>
             <OrbitControls
