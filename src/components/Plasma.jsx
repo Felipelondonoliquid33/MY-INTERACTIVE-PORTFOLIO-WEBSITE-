@@ -88,20 +88,50 @@ export const Plasma = ({
 }) => {
   const containerRef = useRef(null);
   const mousePos = useRef({ x: 0, y: 0 });
+  const rendererRef = useRef(null);
+  const rafRef = useRef(null);
+  const contextLostRef = useRef(false);
   
-  // Remove forced mobile fallback: always try effect, fallback only if WebGL fails
-  const [hasError, setHasError] = useState(false);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.matchMedia("(max-width: 768px)").matches : false);
+  // Detect mobile immediately - force gradient fallback on mobile for reliability
+  const initialMobileCheck = typeof window !== 'undefined' 
+    ? (window.matchMedia("(max-width: 768px)").matches || 
+       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    : false;
+  
+  // On mobile, always use gradient fallback for reliability
+  // On desktop, try WebGL but fallback to gradient if it fails
+  const [hasError, setHasError] = useState(initialMobileCheck);
+  const [isMobile, setIsMobile] = useState(initialMobileCheck);
   const [isInitializing, setIsInitializing] = useState(false);
 
   useEffect(() => {
-    // Test WebGL support for all devices
+    // Update mobile state on resize
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const handleChange = (e) => {
+      setIsMobile(e.matches);
+      // If switching to mobile, force fallback
+      if (e.matches) {
+        setHasError(true);
+      }
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    // On mobile, skip WebGL entirely - use gradient fallback
+    if (isMobile || initialMobileCheck) {
+      setHasError(true);
+      return;
+    }
+    
+    // Desktop: Test WebGL support
     const testCanvas = document.createElement('canvas');
     const testGl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
     if (!testGl) {
       setHasError(true);
     }
-  }, []);
+  }, [isMobile, initialMobileCheck]);
 
   useEffect(() => {
     // Skip WebGL initialization if there's an error
@@ -204,6 +234,35 @@ export const Plasma = ({
       }
       
       containerRef.current.appendChild(rendererCanvas);
+      rendererRef.current = renderer;
+      
+      // Handle WebGL context loss (common on mobile/after inactivity)
+      const handleContextLost = (e) => {
+        e.preventDefault();
+        contextLostRef.current = true;
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+        if (import.meta.env.DEV) {
+          console.warn('WebGL context lost, switching to gradient fallback');
+        }
+        setHasError(true);
+      };
+      
+      const handleContextRestored = () => {
+        contextLostRef.current = false;
+        // Don't auto-restore on mobile, keep using gradient
+        if (!isMobile && !initialMobileCheck) {
+          if (import.meta.env.DEV) {
+            console.log('WebGL context restored, attempting to reinitialize');
+          }
+          // Could reinitialize here if needed, but for now keep fallback
+        }
+      };
+      
+      rendererCanvas.addEventListener('webglcontextlost', handleContextLost);
+      rendererCanvas.addEventListener('webglcontextrestored', handleContextRestored);
       
       // Mark as initialized successfully
       setIsInitializing(false);
@@ -258,15 +317,29 @@ export const Plasma = ({
       ro.observe(containerEl);
       setSize();
 
-      let raf = 0;
       const t0 = performance.now();
 
       const loop = t => {
-        if (!containerRef.current) {
-          cancelAnimationFrame(raf);
+        if (!containerRef.current || contextLostRef.current) {
+          if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+          }
           return;
         }
         try {
+          // Check if WebGL context is still valid
+          const isContextLost = rendererGl.isContextLost();
+          if (isContextLost) {
+            contextLostRef.current = true;
+            setHasError(true);
+            if (rafRef.current) {
+              cancelAnimationFrame(rafRef.current);
+              rafRef.current = null;
+            }
+            return;
+          }
+          
           let timeValue = (t - t0) * 0.001;
           if (direction === 'pingpong') {
             const pingpongDuration = 10;
@@ -281,23 +354,34 @@ export const Plasma = ({
             program.uniforms.iTime.value = timeValue;
           }
           renderer.render({ scene: mesh });
-          raf = requestAnimationFrame(loop);
+          rafRef.current = requestAnimationFrame(loop);
         } catch (error) {
           if (import.meta.env.DEV) {
             console.error('Plasma render error:', error);
           }
-          cancelAnimationFrame(raf);
+          if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+          }
+          contextLostRef.current = true;
           setHasError(true);
         }
       };
 
-      raf = requestAnimationFrame(loop);
+      rafRef.current = requestAnimationFrame(loop);
 
       return () => {
-        cancelAnimationFrame(raf);
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
         ro.disconnect();
         if (mouseInteractive && !isMobile && containerEl) {
           containerEl.removeEventListener('mousemove', handleMouseMove);
+        }
+        if (rendererCanvas) {
+          rendererCanvas.removeEventListener('webglcontextlost', handleContextLost);
+          rendererCanvas.removeEventListener('webglcontextrestored', handleContextRestored);
         }
         try {
           if (containerEl && rendererCanvas && containerEl.contains(rendererCanvas)) {
@@ -308,6 +392,7 @@ export const Plasma = ({
             console.warn('Canvas cleanup error:', error);
           }
         }
+        rendererRef.current = null;
       };
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -317,20 +402,21 @@ export const Plasma = ({
     }
   }, [color, speed, direction, scale, opacity, mouseInteractive, hasError, isMobile, isInitializing]);
 
-  // Show fallback gradient background only if WebGL fails
+  // Always show gradient fallback on mobile for reliability
+  // On desktop, show gradient if WebGL fails or context is lost
   const gradientColor = color || '#915EFF';
-  if (hasError) {
-    // On mobile, use a static, solid dark purple gradient for performance and reliability
-    const isMobile = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  const shouldUseFallback = hasError || isMobile || initialMobileCheck;
+  
+  if (shouldUseFallback) {
+    // Use animated gradient that matches Plasma effect colors
     return (
       <div
         ref={containerRef}
         className="plasma-container plasma-fallback"
         style={{
-          background: isMobile
-            ? 'linear-gradient(135deg, #2d174d 0%, #915EFF 60%, #18122B 100%)'
-            : 'linear-gradient(135deg, #18122B 0%, #915EFF 30%, #232946 70%, #18122B 100%)',
-          backgroundSize: 'cover',
+          background: `linear-gradient(135deg, ${gradientColor}20 0%, #050816 20%, #100d25 50%, #050816 80%, ${gradientColor}20 100%)`,
+          backgroundSize: '400% 400%',
+          animation: 'gradientShift 20s ease infinite',
           minHeight: '100vh',
           minWidth: '100vw',
           position: 'fixed',
@@ -340,7 +426,10 @@ export const Plasma = ({
           bottom: 0,
           zIndex: 0,
           pointerEvents: 'none',
-          backgroundColor: '#2d174d',
+          backgroundColor: '#050816', // Solid fallback color
+          willChange: 'background-position',
+          transform: 'translateZ(0)', // Hardware acceleration
+          backfaceVisibility: 'hidden',
         }}
       />
     );

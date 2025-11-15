@@ -6,9 +6,9 @@ import Plasma from "./components/Plasma";
 const App = () => {
   return (
     <BrowserRouter>
-      <div className='relative z-0'>
+      <div className='relative z-0' style={{ backgroundColor: '#050816', minHeight: '100vh' }}>
         {/* Plasma Background for entire page */}
-        <div className="fixed inset-0 z-0">
+        <div className="fixed inset-0 z-0" style={{ backgroundColor: '#050816' }}>
           <Plasma 
             color="#915EFF"
             speed={0.6}

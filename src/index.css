@@ -261,7 +261,16 @@
     width: 100% !important;
     height: 100% !important;
     min-height: 100vh !important;
-    background-color: transparent !important;
+    /* Never allow transparent - always have a dark background */
+    background-color: #050816 !important;
+  }
+  
+  /* Ensure fallback gradient is always visible */
+  .plasma-fallback {
+    background-color: #050816 !important;
+    background: linear-gradient(135deg, #915EFF20 0%, #050816 20%, #100d25 50%, #050816 80%, #915EFF20 100%) !important;
+    background-size: 400% 400% !important;
+    animation: gradientShift 20s ease infinite !important;
   }
   
   /* Canvas in Hero should be transparent on mobile */
