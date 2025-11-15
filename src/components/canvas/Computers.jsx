@@ -22,9 +22,9 @@ const Computers = ({ isMobile }) => {
       <ambientLight intensity={isMobile ? 0.5 : 0.2} />
       <primitive
         object={computer.scene}
-        scale={isMobile ? 0.35 : 0.75} // Much smaller on mobile
-        position={isMobile ? [0, -1.5, 0] : [0, -3.25, -1.5]} // Centered and closer on mobile
-        rotation={isMobile ? [0, 0, 0] : [-0.01, -0.2, -0.1]} // No initial rotation on mobile (auto-rotate handles it)
+        scale={isMobile ? 0.6 : 0.75} // Larger on mobile
+        position={isMobile ? [0, -0.5, 0] : [0, -3.25, -1.5]} // Raised on mobile
+        rotation={isMobile ? [0, Math.PI / 8, 0] : [-0.01, -0.2, -0.1]} // Slight angle for mobile
       />
     </mesh>
   );
@@ -85,18 +85,27 @@ const ComputersCanvas = () => {
         zIndex: 1
       }}
     >
+
       <Suspense fallback={<CanvasLoader />}>
-        <OrbitControls
-          enableZoom={false}
-          maxPolarAngle={Math.PI / 2}
-          minPolarAngle={Math.PI / 2}
-          enablePan={false}
-          enableRotate={!isMobile} // Disable manual rotation on mobile
-          autoRotate={isMobile} // Auto-rotate on mobile
-          autoRotateSpeed={isMobile ? 1.5 : 0} // Slow rotation on mobile
-          makeDefault
-        />
-        <Computers isMobile={isMobile} />
+        {isMobile ? (
+          // On mobile, show a fixed, non-interactive, statically rotated model
+          <group rotation={[0, Math.PI / 6, 0]}>
+            <Computers isMobile={true} />
+          </group>
+        ) : (
+          <>
+            <OrbitControls
+              enableZoom={false}
+              maxPolarAngle={Math.PI / 2}
+              minPolarAngle={Math.PI / 2}
+              enablePan={false}
+              enableRotate={true}
+              autoRotate={false}
+              makeDefault
+            />
+            <Computers isMobile={false} />
+          </>
+        )}
       </Suspense>
 
       <Preload all />

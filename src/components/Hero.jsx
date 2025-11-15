@@ -76,20 +76,19 @@ const Hero = () => {
       )}
       {isMobile && (
         <div
-          className="fixed left-1/2 bottom-0 z-20"
+          className="fixed left-1/2 bottom-8 z-20"
           style={{
             transform: 'translateX(-50%)',
-            width: '220px',
-            height: '140px',
+            width: '320px',
+            height: '200px',
             pointerEvents: 'none',
-            background: 'rgba(0,0,0,0.1)',
-            border: '2px dashed #915EFF',
+            background: 'rgba(0,0,0,0.0)',
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <span style={{position:'absolute',top:4,left:4,fontSize:10,color:'#915EFF',zIndex:10}}>3D Debug: Mobile</span>
           <ComputersCanvas />
         </div>
       )}
