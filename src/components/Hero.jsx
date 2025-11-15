@@ -61,7 +61,8 @@ const Hero = () => {
 
       {/* 3D Model Canvas - Smaller and auto-rotating on mobile */}
 
-      {/* Hide 3D background on mobile to prevent errors and improve performance */}
+
+      {/* Desktop: full background 3D model. Mobile: fixed small 3D model at bottom */}
       {!isMobile && (
         <div 
           className="absolute inset-0 z-[1]"
@@ -70,6 +71,25 @@ const Hero = () => {
             backgroundColor: 'transparent'
           }}
         >
+          <ComputersCanvas />
+        </div>
+      )}
+      {isMobile && (
+        <div
+          className="fixed left-1/2 bottom-0 z-20"
+          style={{
+            transform: 'translateX(-50%)',
+            width: '220px',
+            height: '140px',
+            pointerEvents: 'none',
+            background: 'rgba(0,0,0,0.1)',
+            border: '2px dashed #915EFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span style={{position:'absolute',top:4,left:4,fontSize:10,color:'#915EFF',zIndex:10}}>3D Debug: Mobile</span>
           <ComputersCanvas />
         </div>
       )}
