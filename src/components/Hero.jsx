@@ -76,7 +76,7 @@ const Hero = () => {
       )}
       {isMobile && (
         <div
-          className="fixed left-1/2 bottom-8 z-20"
+          className="absolute left-1/2 bottom-8 z-20"
           style={{
             transform: 'translateX(-50%)',
             width: '320px',
