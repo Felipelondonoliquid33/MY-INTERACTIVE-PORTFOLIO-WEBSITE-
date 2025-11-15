@@ -60,15 +60,19 @@ const Hero = () => {
       </div>
 
       {/* 3D Model Canvas - Smaller and auto-rotating on mobile */}
-      <div 
-        className={`absolute inset-0 z-[1] ${isMobile ? 'pointer-events-none' : ''}`}
-        style={{ 
-          background: 'transparent',
-          backgroundColor: 'transparent'
-        }}
-      >
-        <ComputersCanvas />
-      </div>
+
+      {/* Hide 3D background on mobile to prevent errors and improve performance */}
+      {!isMobile && (
+        <div 
+          className="absolute inset-0 z-[1]"
+          style={{ 
+            background: 'transparent',
+            backgroundColor: 'transparent'
+          }}
+        >
+          <ComputersCanvas />
+        </div>
+      )}
 
       <div className={`absolute ${isMobile ? 'bottom-20' : 'xs:bottom-10 bottom-32'} w-full flex justify-center items-center z-10`}>
         <a href='#about' aria-label="Scroll to about section">
