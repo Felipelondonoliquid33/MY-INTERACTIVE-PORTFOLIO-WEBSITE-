@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useId } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "../utils/cn";
 
 export function ContainerTextFlip({
@@ -12,7 +12,21 @@ export function ContainerTextFlip({
   const id = useId();
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [width, setWidth] = useState(100);
+  const [isMobile, setIsMobile] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   const textRef = React.useRef(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mediaQuery.matches);
+    
+    const handleMediaQueryChange = (event) => {
+      setIsMobile(event.matches);
+    };
+    
+    mediaQuery.addEventListener("change", handleMediaQueryChange);
+    return () => mediaQuery.removeEventListener("change", handleMediaQueryChange);
+  }, []);
 
   const updateWidthForWord = () => {
     if (textRef.current) {
@@ -36,48 +50,60 @@ export function ContainerTextFlip({
     return () => clearInterval(intervalId);
   }, [words, interval]);
 
+  // Optimize blur for mobile - reduce blur intensity
+  const blurAmount = isMobile || shouldReduceMotion ? 5 : 10;
+  const letterDelay = isMobile ? 0.01 : 0.02;
+
   return (
     <motion.p
-      layout
+      layout={!shouldReduceMotion}
       layoutId={`words-here-${id}`}
       animate={{ width }}
-      transition={{ duration: animationDuration / 2000 }}
+      transition={{ 
+        duration: shouldReduceMotion ? 0.1 : animationDuration / 2000,
+        ease: "easeInOut"
+      }}
       className={cn(
         "relative inline-block rounded-lg px-3 pt-2 pb-2.5 text-center",
         "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold",
         "bg-gradient-to-b from-[#915EFF]/25 via-[#915EFF]/15 to-[#915EFF]/10",
         "border border-[#915EFF]/40",
         "shadow-[0_4px_15px_rgba(145,94,255,0.25),inset_0_1px_0_rgba(255,255,255,0.1)]",
-        "backdrop-blur-sm",
+        isMobile ? "backdrop-blur-[2px]" : "backdrop-blur-sm",
         className
       )}
+      style={{ willChange: isMobile ? "auto" : "width" }}
       key={words[currentWordIndex]}
     >
       <motion.div
         transition={{
-          duration: animationDuration / 1000,
+          duration: shouldReduceMotion ? 0.1 : animationDuration / 1000,
           ease: "easeInOut",
         }}
         className={cn("inline-block", textClassName)}
         ref={textRef}
-        layoutId={`word-div-${words[currentWordIndex]}-${id}`}
+        layoutId={shouldReduceMotion ? undefined : `word-div-${words[currentWordIndex]}-${id}`}
       >
         <motion.div className="inline-block">
           {words[currentWordIndex].split("").map((letter, index) => (
             <motion.span
               key={index}
               initial={{
-                opacity: 0,
-                filter: "blur(10px)",
+                opacity: shouldReduceMotion ? 1 : 0,
+                filter: shouldReduceMotion ? "blur(0px)" : `blur(${blurAmount}px)`,
               }}
               animate={{
                 opacity: 1,
                 filter: "blur(0px)",
               }}
               transition={{
-                delay: index * 0.02,
+                delay: shouldReduceMotion ? 0 : index * letterDelay,
+                duration: shouldReduceMotion ? 0 : 0.3,
               }}
               className="text-[#915EFF] drop-shadow-[0_0_8px_rgba(145,94,255,0.5)]"
+              style={{ 
+                willChange: isMobile && !shouldReduceMotion ? "filter, opacity" : "auto"
+              }}
             >
               {letter}
             </motion.span>

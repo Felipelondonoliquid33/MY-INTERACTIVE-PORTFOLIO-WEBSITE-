@@ -183,9 +183,9 @@ const testimonials = [
 
 const projects = [
   {
-    name: "AI-Powered LMS Chatbot",
+    name: "Interactive Web Design & Mockup Agency",
     description:
-      "Developed and integrated an AI chatbot for internal LMS and SharePoint training, enhancing user engagement through interactive HTML-enhanced learning components and seamless UX design.",
+      "A highly interactive landing page for a modern web design and mockup agency. Showcases dynamic UI elements, engaging animations, and a seamless user experience to attract clients and highlight creative digital solutions.",
     tags: [
       {
         name: "react",
@@ -200,50 +200,50 @@ const projects = [
         color: "pink-text-gradient",
       },
     ],
-    image: aiChatbotProject,
-    source_code_link: "https://github.com/",
+    image: "/SCREENSHOT%20MOCKUP.png",
+    source_code_link: "https://web-design-and-mockup-ai-agency-landiong-page-react-8sntrpgwm.vercel.app/",
   },
   {
-    name: "Cloud-Based Moodle Solutions",
+    name: "Celestial Paperworkers Landing Page",
     description:
-      "Managed and designed cloud-based Moodle solutions for B2B, Education, and Government sectors, including custom theme development, onboarding content, and branded educational visuals.",
-    tags: [
-      {
-        name: "moodle",
-        color: "blue-text-gradient",
-      },
-      {
-        name: "html/css",
-        color: "green-text-gradient",
-      },
-      {
-        name: "cloud",
-        color: "pink-text-gradient",
-      },
-    ],
-    image: moodleDashboard,
-    source_code_link: "https://github.com/",
-  },
-  {
-    name: "Vibecoding Portfolio Experience",
-    description:
-      "Creative portfolio showcasing the fusion of Vibecoding principles, UX/UI design, and front-end animation frameworks. Built with React, Framer Motion, and Three.js to create immersive, emotion-driven digital experiences.",
+      "A visually stunning and interactive landing page for Celestial Paperworkers. Features modern design, smooth animations, and a user-focused experience to showcase the brand's digital presence.",
     tags: [
       {
         name: "react",
         color: "blue-text-gradient",
       },
       {
-        name: "framer-motion",
+        name: "landing-page",
         color: "green-text-gradient",
       },
       {
-        name: "threejs",
+        name: "animation",
         color: "pink-text-gradient",
       },
     ],
-    image: tripguide,
-    source_code_link: "https://github.com/",
+    image: "/SCREENSHOT%20CELESTIAL.png",
+    source_code_link: "https://celestial-paperworkers-landing.vercel.app/",
+  },
+  {
+    name: "Margarita Bernal Portfolio",
+    description:
+      "A creative and interactive portfolio website for Margarita Bernal. Highlights design skills, project showcases, and engaging animations to present a professional digital presence.",
+    tags: [
+      {
+        name: "react",
+        color: "blue-text-gradient",
+      },
+      {
+        name: "portfolio",
+        color: "green-text-gradient",
+      },
+      {
+        name: "animation",
+        color: "pink-text-gradient",
+      },
+    ],
+    image: "/SCREENSHOT%20PORTAFOLIO.png",
+    source_code_link: "https://portafolio-margarita-bernal.vercel.app/",
   },
 ];
 

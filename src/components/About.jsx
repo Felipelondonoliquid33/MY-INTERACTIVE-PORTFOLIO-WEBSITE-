@@ -7,18 +7,31 @@ import { services } from "../constants";
 import { SectionWrapper } from "../hoc";
 import { fadeIn, textVariant } from "../utils/motion";
 
-const ServiceCard = ({ index, title, icon }) => (
-  <Tilt className='xs:w-[250px] w-full'>
-    <motion.div
-      variants={fadeIn("right", "spring", index * 0.5, 0.75)}
-      className='w-full green-pink-gradient p-[1px] rounded-[20px] shadow-card'
+const ServiceCard = ({ index, title, icon }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mediaQuery.matches);
+    const handleMediaQueryChange = (event) => setIsMobile(event.matches);
+    mediaQuery.addEventListener("change", handleMediaQueryChange);
+    return () => mediaQuery.removeEventListener("change", handleMediaQueryChange);
+  }, []);
+  
+  return (
+    <Tilt 
+      className='xs:w-[250px] w-full'
+      options={{
+        max: isMobile ? 15 : 45,
+        scale: 1,
+        speed: isMobile ? 300 : 450,
+      }}
     >
+      <motion.div
+        variants={fadeIn("right", "spring", index * 0.5, 0.75)}
+        className='w-full green-pink-gradient p-[1px] rounded-[20px] shadow-card'
+      >
       <div
-        options={{
-          max: 45,
-          scale: 1,
-          speed: 450,
-        }}
         className='bg-tertiary rounded-[20px] py-5 px-12 min-h-[280px] flex justify-evenly items-center flex-col'
       >
         <img
@@ -33,7 +46,8 @@ const ServiceCard = ({ index, title, icon }) => (
       </div>
     </motion.div>
   </Tilt>
-);
+  );
+};
 
 const About = () => {
   return (

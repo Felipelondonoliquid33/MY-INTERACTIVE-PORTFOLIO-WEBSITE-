@@ -1,0 +1,372 @@
+import { useEffect, useRef, useState } from 'react';
+
+import { Renderer, Program, Mesh, Triangle } from 'ogl';
+
+import './Plasma.css';
+
+const hexToRgb = hex => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return [1, 0.5, 0.2];
+  return [parseInt(result[1], 16) / 255, parseInt(result[2], 16) / 255, parseInt(result[3], 16) / 255];
+};
+
+const vertex = `#version 300 es
+precision highp float;
+in vec2 position;
+in vec2 uv;
+out vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
+
+const fragment = `#version 300 es
+precision highp float;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform vec3 uCustomColor;
+uniform float uUseCustomColor;
+uniform float uSpeed;
+uniform float uDirection;
+uniform float uScale;
+uniform float uOpacity;
+uniform vec2 uMouse;
+uniform float uMouseInteractive;
+out vec4 fragColor;
+void mainImage(out vec4 o, vec2 C) {
+  vec2 center = iResolution.xy * 0.5;
+  C = (C - center) / uScale + center;
+  
+  vec2 mouseOffset = (uMouse - center) * 0.0002;
+  C += mouseOffset * length(C - center) * step(0.5, uMouseInteractive);
+  
+  float i, d, z, T = iTime * uSpeed * uDirection;
+  vec3 O, p, S;
+  for (vec2 r = iResolution.xy, Q; ++i < 60.; O += o.w/d*o.xyz) {
+    p = z*normalize(vec3(C-.5*r,r.y)); 
+    p.z -= 4.; 
+    S = p;
+    d = p.y-T;
+    
+    p.x += .4*(1.+p.y)*sin(d + p.x*0.1)*cos(.34*d + p.x*0.05); 
+    Q = p.xz *= mat2(cos(p.y+vec4(0,11,33,0)-T)); 
+    z+= d = abs(sqrt(length(Q*Q)) - .25*(5.+S.y))/3.+8e-4; 
+    o = 1.+sin(S.y+p.z*.5+S.z-length(S-p)+vec4(2,1,0,8));
+  }
+  
+  o.xyz = tanh(O/1e4);
+}
+bool finite1(float x){ return !(isnan(x) || isinf(x)); }
+vec3 sanitize(vec3 c){
+  return vec3(
+    finite1(c.r) ? c.r : 0.0,
+    finite1(c.g) ? c.g : 0.0,
+    finite1(c.b) ? c.b : 0.0
+  );
+}
+void main() {
+  vec4 o = vec4(0.0);
+  mainImage(o, gl_FragCoord.xy);
+  vec3 rgb = sanitize(o.rgb);
+  
+  float intensity = (rgb.r + rgb.g + rgb.b) / 3.0;
+  vec3 customColor = intensity * uCustomColor;
+  vec3 finalColor = mix(rgb, customColor, step(0.5, uUseCustomColor));
+  
+  float alpha = length(rgb) * uOpacity;
+  fragColor = vec4(finalColor, alpha);
+}`;
+
+export const Plasma = ({
+  color = '#915EFF',
+  speed = 0.6,
+  direction = 'forward',
+  scale = 1.1,
+  opacity = 0.8,
+  mouseInteractive = true
+}) => {
+  const containerRef = useRef(null);
+  const mousePos = useRef({ x: 0, y: 0 });
+  
+  // Initialize mobile detection immediately (before first render)
+  const initialMobileCheck = typeof window !== 'undefined' 
+    ? (window.matchMedia("(max-width: 768px)").matches || 
+       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+    : false;
+  
+  const [hasError, setHasError] = useState(initialMobileCheck); // Start with true on mobile
+  const [isMobile, setIsMobile] = useState(initialMobileCheck);
+  const [isInitializing, setIsInitializing] = useState(false); // Start as false since we know immediately
+
+  useEffect(() => {
+    // Verify mobile detection and handle desktop WebGL test
+    if (!initialMobileCheck) {
+      // Desktop: test WebGL support
+      const testCanvas = document.createElement('canvas');
+      const testGl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
+      if (!testGl) {
+        setHasError(true);
+      }
+    }
+    // Mobile is already set correctly in initial state, no need to change
+  }, []); // Run only once on mount
+
+  useEffect(() => {
+    // Skip WebGL initialization if there's an error
+    if (hasError) return;
+    if (!containerRef.current) return;
+
+    try {
+      const containerEl = containerRef.current;
+      const useCustomColor = color ? 1.0 : 0.0;
+      const customColorRgb = color ? hexToRgb(color) : [1, 1, 1];
+      const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
+
+      // Check WebGL support - on mobile, prefer WebGL1 for better compatibility
+      const canvas = document.createElement('canvas');
+      let gl = null;
+      let useWebGL2 = false;
+      
+      // Try WebGL2 first (required for the shader), then fallback to WebGL1
+      gl = canvas.getContext('webgl2', { 
+        alpha: true, 
+        antialias: false,
+        powerPreference: isMobile ? 'low-power' : 'high-performance',
+        preserveDrawingBuffer: false
+      });
+      
+      if (gl) {
+        useWebGL2 = true;
+      } else {
+        // WebGL2 not available, try WebGL1 (but shader won't work, so we'll use fallback)
+        gl = canvas.getContext('webgl', { 
+          alpha: true, 
+          antialias: false,
+          powerPreference: isMobile ? 'low-power' : 'high-performance',
+          preserveDrawingBuffer: false
+        });
+        useWebGL2 = false;
+        // If only WebGL1 is available, the shader won't work, so use gradient fallback
+        if (gl && !canvas.getContext('webgl2')) {
+          if (import.meta.env.DEV) {
+            console.warn('WebGL2 not available, using gradient fallback');
+          }
+          setHasError(true);
+          return;
+        }
+      }
+      
+      if (!gl) {
+        if (import.meta.env.DEV) {
+          console.warn('WebGL not supported, using fallback background');
+        }
+        setHasError(true);
+        return;
+      }
+
+      // Only use WebGL2 renderer (shader requires it)
+      if (!useWebGL2) {
+        if (import.meta.env.DEV) {
+          console.warn('WebGL2 required for Plasma effect, using gradient fallback');
+        }
+        setHasError(true);
+        return;
+      }
+
+      const renderer = new Renderer({
+        webgl: 2,
+        alpha: true,
+        antialias: false,
+        dpr: isMobile ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2),
+        powerPreference: isMobile ? 'low-power' : 'high-performance'
+      });
+
+      const rendererGl = renderer.gl;
+      if (!rendererGl) {
+        if (import.meta.env.DEV) {
+          console.warn('Renderer GL context failed, using fallback background');
+        }
+        setHasError(true);
+        return;
+      }
+
+      const rendererCanvas = rendererGl.canvas;
+      rendererCanvas.style.display = 'block';
+      rendererCanvas.style.width = '100%';
+      rendererCanvas.style.height = '100%';
+      rendererCanvas.style.position = 'absolute';
+      rendererCanvas.style.top = '0';
+      rendererCanvas.style.left = '0';
+      rendererCanvas.style.zIndex = '0';
+      rendererCanvas.style.pointerEvents = 'none';
+      
+      // Check if canvas already exists
+      if (containerRef.current.querySelector('canvas')) {
+        return;
+      }
+      
+      // Ensure container has proper dimensions
+      if (containerRef.current) {
+        containerRef.current.style.minHeight = '100vh';
+        containerRef.current.style.minWidth = '100vw';
+      }
+      
+      containerRef.current.appendChild(rendererCanvas);
+      
+      // Mark as initialized successfully
+      setIsInitializing(false);
+
+      const geometry = new Triangle(rendererGl);
+      const program = new Program(rendererGl, {
+        vertex: vertex,
+        fragment: fragment,
+        uniforms: {
+          iTime: { value: 0 },
+          iResolution: { value: new Float32Array([1, 1]) },
+          uCustomColor: { value: new Float32Array(customColorRgb) },
+          uUseCustomColor: { value: useCustomColor },
+          uSpeed: { value: isMobile ? speed * 0.3 : speed * 0.4 },
+          uDirection: { value: directionMultiplier },
+          uScale: { value: isMobile ? scale * 0.9 : scale },
+          uOpacity: { value: isMobile ? Math.min(opacity, 0.7) : opacity },
+          uMouse: { value: new Float32Array([0, 0]) },
+          uMouseInteractive: { value: (mouseInteractive && !isMobile) ? 1.0 : 0.0 }
+        }
+      });
+
+      const mesh = new Mesh(rendererGl, { geometry, program });
+
+      const handleMouseMove = e => {
+        if (!mouseInteractive || isMobile) return;
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        mousePos.current.x = e.clientX - rect.left;
+        mousePos.current.y = e.clientY - rect.top;
+        const mouseUniform = program.uniforms.uMouse.value;
+        mouseUniform[0] = mousePos.current.x;
+        mouseUniform[1] = mousePos.current.y;
+      };
+
+      if (mouseInteractive && !isMobile) {
+        containerEl.addEventListener('mousemove', handleMouseMove);
+      }
+
+      const setSize = () => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+        renderer.setSize(width, height);
+        const res = program.uniforms.iResolution.value;
+        res[0] = rendererGl.drawingBufferWidth;
+        res[1] = rendererGl.drawingBufferHeight;
+      };
+
+      const ro = new ResizeObserver(setSize);
+      ro.observe(containerEl);
+      setSize();
+
+      let raf = 0;
+      const t0 = performance.now();
+
+      const loop = t => {
+        if (!containerRef.current) {
+          cancelAnimationFrame(raf);
+          return;
+        }
+        try {
+          let timeValue = (t - t0) * 0.001;
+          if (direction === 'pingpong') {
+            const pingpongDuration = 10;
+            const segmentTime = timeValue % pingpongDuration;
+            const isForward = Math.floor(timeValue / pingpongDuration) % 2 === 0;
+            const u = segmentTime / pingpongDuration;
+            const smooth = u * u * (3 - 2 * u);
+            const pingpongTime = isForward ? smooth * pingpongDuration : (1 - smooth) * pingpongDuration;
+            program.uniforms.uDirection.value = 1.0;
+            program.uniforms.iTime.value = pingpongTime;
+          } else {
+            program.uniforms.iTime.value = timeValue;
+          }
+          renderer.render({ scene: mesh });
+          raf = requestAnimationFrame(loop);
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.error('Plasma render error:', error);
+          }
+          cancelAnimationFrame(raf);
+          setHasError(true);
+        }
+      };
+
+      raf = requestAnimationFrame(loop);
+
+      return () => {
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        if (mouseInteractive && !isMobile && containerEl) {
+          containerEl.removeEventListener('mousemove', handleMouseMove);
+        }
+        try {
+          if (containerEl && rendererCanvas && containerEl.contains(rendererCanvas)) {
+            containerEl.removeChild(rendererCanvas);
+          }
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.warn('Canvas cleanup error:', error);
+          }
+        }
+      };
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Plasma initialization error:', error);
+      }
+      setHasError(true);
+    }
+  }, [color, speed, direction, scale, opacity, mouseInteractive, hasError, isMobile, isInitializing]);
+
+  // Show fallback gradient background if WebGL fails or on mobile
+  // Mobile always uses gradient for stability and performance
+  // Always show gradient on mobile or if there's an error
+  const gradientColor = color || '#915EFF';
+  
+  if (hasError || isMobile || initialMobileCheck) {
+    return (
+      <div 
+        ref={containerRef} 
+        className="plasma-container"
+        style={{
+          background: `linear-gradient(135deg, ${gradientColor}20 0%, #050816 20%, #100d25 50%, #050816 80%, ${gradientColor}20 100%)`,
+          backgroundSize: '400% 400%',
+          animation: 'gradientShift 20s ease infinite',
+          minHeight: '100vh',
+          minWidth: '100vw',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+          pointerEvents: 'none'
+        }}
+      />
+    );
+  }
+
+  // Desktop WebGL version (only if not mobile and no error)
+  return (
+    <div 
+      ref={containerRef} 
+      className="plasma-container"
+      style={{
+        minHeight: '100vh',
+        minWidth: '100vw',
+        backgroundColor: '#050816' // Fallback solid color while loading
+      }}
+    />
+  );
+};
+
+export default Plasma;
+

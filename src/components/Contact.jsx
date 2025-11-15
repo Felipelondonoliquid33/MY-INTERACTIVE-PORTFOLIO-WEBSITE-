@@ -47,25 +47,27 @@ const Contact = () => {
       });
 
       if (response.ok) {
-          setLoading(false);
+        setLoading(false);
         setSubmitStatus("success");
         alert("Thank you! I will get back to you as soon as possible.");
 
-          setForm({
-            name: "",
-            email: "",
-            message: "",
-          });
+        setForm({
+          name: "",
+          email: "",
+          message: "",
+        });
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Something went wrong");
       }
     } catch (error) {
-          setLoading(false);
+      setLoading(false);
       setSubmitStatus("error");
-      console.error("Form submission error:", error);
-          alert("Ahh, something went wrong. Please try again.");
-        }
+      if (import.meta.env.DEV) {
+        console.error("Form submission error:", error);
+      }
+      alert("Ahh, something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -83,10 +85,10 @@ const Contact = () => {
           <div className='flex items-center gap-4'>
             <span className='text-secondary font-medium'>Email:</span>
             <a 
-              href='mailto:flondonohumar@gmail.com' 
+              href='mailto:londonof@gmail.com' 
               className='text-white hover:text-[#915EFF] transition-colors'
             >
-              flondonohumar@gmail.com
+              londonof@gmail.com
             </a>
           </div>
           <div className='flex items-center gap-4'>
