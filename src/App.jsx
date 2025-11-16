@@ -1,5 +1,6 @@
-import { BrowserRouter } from "react-router-dom";
 
+import { BrowserRouter } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { About, Contact, Experience, Feedbacks, Hero, Navbar, Tech, Works, WorkProcess, StarsCanvas } from "./components";
 import Plasma from "./components/Plasma";
 
@@ -35,6 +36,7 @@ const App = () => {
           </div>
         </div>
       </div>
+      <Analytics />
     </BrowserRouter>
   );
 }
